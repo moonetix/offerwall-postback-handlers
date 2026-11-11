@@ -1,0 +1,15 @@
+{
+  "name": "moonetix-postback-handler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Moonetix offerwall postback handler for Node.js 22, no dependencies",
+  "license": "MIT",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning test.js"
+  }
+}

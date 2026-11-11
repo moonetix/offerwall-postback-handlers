@@ -1,0 +1,25 @@
+# Secrets
+.env
+
+# Local databases
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Java
+build/
+*.class
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store

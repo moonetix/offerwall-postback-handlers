@@ -1,0 +1,167 @@
+{
+    "key": "test_postback_key_not_secret",
+    "note": "Postback paths produced by the Moonetix postback code and signed with the test key above. The key is for tests only.",
+    "cases": [
+        {
+            "name": "credit",
+            "path": "/postback?user=42&tx=tx_1001&event=e1&status=1&reward=150&payout=0.5&offer_id=77&hash=0286393d32f94fba99de144498047e100fd2d997c6b0f4e6ca86bf1652b36bc0",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "150"
+            }
+        },
+        {
+            "name": "duplicate credit (retry) is skipped",
+            "path": "/postback?user=42&tx=tx_1001&event=e1&status=1&reward=150&payout=0.5&offer_id=77&hash=0286393d32f94fba99de144498047e100fd2d997c6b0f4e6ca86bf1652b36bc0",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "150"
+            }
+        },
+        {
+            "name": "decimal reward",
+            "path": "/postback?user=42&tx=tx_1002&event=e1&status=1&reward=0.75&payout=0.5&offer_id=77&hash=42e24da29ee465dc147848aa3541225b9334531a84067415586ab7a0e69e2d28",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "150.75"
+            }
+        },
+        {
+            "name": "five decimals kept",
+            "path": "/postback?user=42&tx=tx_1003&event=e1&status=1&reward=1.23456&payout=0.5&offer_id=77&hash=e50911a7e583642acd18bff5edcb08c5c11da2f639533b1154751bfce6bb4e97",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "151.98456"
+            }
+        },
+        {
+            "name": "reversal takes the credit back",
+            "path": "/postback?user=42&tx=tx_1001&event=e1&status=2&reward=150&payout=0.5&offer_id=77&hash=d6caea53a509899a633dee474b0249d0c9bfbddd33211d96ef7cfeada92be400",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "second reversal is skipped",
+            "path": "/postback?user=42&tx=tx_1001&event=e1&status=2&reward=150&payout=0.5&offer_id=77&hash=d6caea53a509899a633dee474b0249d0c9bfbddd33211d96ef7cfeada92be400",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "reversal without credit is ignored",
+            "path": "/postback?user=42&tx=tx_1009&event=e1&status=2&reward=50&payout=0.5&offer_id=77&hash=39bf9aa3c47906a56a052366c0d3d2c8cd957275643f998a6f05b63bda9e70c6",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "credit after its reversal is not paid",
+            "path": "/postback?user=42&tx=tx_1009&event=e1&status=1&reward=50&payout=0.5&offer_id=77&hash=d102f43710f2d39e0490f50b92d46a8c5c23fcd8133372492c72ffae4bcc3b04",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "user ID with special characters",
+            "path": "/postback?user=u%3Aalice%2B1%40example.com&tx=tx_1010&event=e1&status=1&reward=12.5&payout=0.5&offer_id=77&hash=936537d5cb6181bb1e680f1ec6dd2504de1950b78730c8d7777aa6f233d8feac",
+            "expect_status": 200,
+            "expect_balances": {
+                "u:alice+1@example.com": "12.5",
+                "u:alice 1@example.com": "0"
+            }
+        },
+        {
+            "name": "dashboard test postback",
+            "path": "/postback?user=43&tx=test_8f3k2a&event=e1&status=1&reward=5&payout=0.5&offer_id=77&hash=38178de35eeb567211f3daa463f175589761d654e525f07cc533664c08ef2509",
+            "expect_status": 200,
+            "expect_balances": {
+                "43": "5"
+            }
+        },
+        {
+            "name": "tampered reward is rejected",
+            "path": "/postback?user=42&tx=tx_1020&event=e1&status=1&reward=1000&payout=0.5&offer_id=77&hash=303013470014e64ac7b970cf027216a5ffa8a5a7af130198f1c844a7e7b78612",
+            "expect_status": 403,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "tampered user is rejected",
+            "path": "/postback?user=43&tx=tx_1020&event=e1&status=1&reward=10&payout=0.5&offer_id=77&hash=303013470014e64ac7b970cf027216a5ffa8a5a7af130198f1c844a7e7b78612",
+            "expect_status": 403,
+            "expect_balances": {
+                "42": "1.98456",
+                "43": "5"
+            }
+        },
+        {
+            "name": "tampered status is rejected",
+            "path": "/postback?user=42&tx=tx_1001&event=e1&status=2&reward=150&payout=0.5&offer_id=77&hash=0286393d32f94fba99de144498047e100fd2d997c6b0f4e6ca86bf1652b36bc0",
+            "expect_status": 403,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "wrong key is rejected",
+            "path": "/postback?user=42&tx=tx_1021&event=e1&status=1&reward=10&payout=0.5&offer_id=77&hash=44d6ca6552af2467d323a258a43511ec5ef26a0d962bba804940b2a376f31b72",
+            "expect_status": 403,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "missing hash is rejected",
+            "path": "/postback?user=42&tx=tx_1020&event=e1&status=1&reward=10&payout=0.5&offer_id=77",
+            "expect_status": 400,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "unknown status is rejected",
+            "path": "/postback?user=42&tx=tx_1022&event=e1&status=3&reward=10&payout=0.5&offer_id=77&hash=9a6190a6ba2fb913fafe8f5a3bfd72d5f5e7248c009250d038ad3c6ffa951df9",
+            "expect_status": 400,
+            "expect_balances": {
+                "42": "1.98456"
+            }
+        },
+        {
+            "name": "invalid user ID is rejected",
+            "path": "/postback?user=bad%20user&tx=tx_1023&event=e1&status=1&reward=10&payout=0.5&offer_id=77&hash=a5a3e75e7c69cc3a08c24c0e5235d45ddb4f2d7badb290e3e67aa6d5263e87a8",
+            "expect_status": 400,
+            "expect_balances": {
+                "bad user": "0"
+            }
+        },
+        {
+            "name": "unknown path",
+            "path": "/nope",
+            "expect_status": 404,
+            "expect_balances": {}
+        },
+        {
+            "name": "valid credit after rejections",
+            "path": "/postback?user=42&tx=tx_1020&event=e1&status=1&reward=10&payout=0.5&offer_id=77&hash=303013470014e64ac7b970cf027216a5ffa8a5a7af130198f1c844a7e7b78612",
+            "expect_status": 200,
+            "expect_balances": {
+                "42": "11.98456"
+            }
+        },
+        {
+            "name": "same credit sent 10 times in parallel is paid once",
+            "path": "/postback?user=44&tx=tx_1030&event=e1&status=1&reward=7&payout=0.5&offer_id=77&hash=fcd3969550cdc11418eafe47995ca575e0fc3032acd6db6f2fde3009c421fb06",
+            "expect_status": 200,
+            "expect_balances": {
+                "44": "7"
+            },
+            "parallel": 10
+        }
+    ]
+}
