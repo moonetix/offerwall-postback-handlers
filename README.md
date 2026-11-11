@@ -2,11 +2,12 @@
 
 **Credit offerwall rewards safely: one small, tested postback handler in PHP, Node.js, Python, and Java.**
 
+[![CI](https://github.com/moonetix/offerwall-postback-handlers/actions/workflows/ci.yml/badge.svg)](https://github.com/moonetix/offerwall-postback-handlers/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-docs.moonetix.com-1f6feb.svg)](https://docs.moonetix.com/postbacks)
 [![Get keys](https://img.shields.io/badge/get%20keys-moonetix.com-0b7a75.svg)](https://moonetix.com/register)
 [![Hash checker](https://img.shields.io/badge/tool-postback%20hash%20checker-6e7781.svg)](https://moonetix.com/tools/postback-hash-checker)
-[![Languages](https://img.shields.io/badge/PHP%208%20%7C%20Node%2022%20%7C%20Python%203%20%7C%20Java%2021-handlers-555.svg)](#handlers)
+[![Languages](https://img.shields.io/badge/PHP%208%20%7C%20Node%2022%20%7C%20Python%203%20%7C%20Java%2017-handlers-555.svg)](#handlers)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#handlers)
 
 Moonetix is a pay-per-result affiliate network. Publishers add its offerwall, and their users earn the publisher's own currency by completing offers. When an offer is credited or reversed, Moonetix calls your postback URL. This repo has a ready handler for that URL in four languages.

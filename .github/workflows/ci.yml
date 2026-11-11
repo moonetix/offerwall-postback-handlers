@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: PHP 8.1, lang: php, version: '8.1', dir: php, run: php test.php }
+          - { name: PHP 8.4, lang: php, version: '8.4', dir: php, run: php test.php }
+          - { name: Node.js 22, lang: node, version: '22', dir: node, run: npm test }
+          - { name: Python 3.12, lang: python, version: '3.12', dir: python, run: python test_handler.py }
+          - { name: Java 17, lang: java, version: '17', dir: java, run: ./test.sh }
+    steps:
+      - uses: actions/checkout@v4
+
+      - if: matrix.lang == 'php'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.version }}
+          extensions: pdo_sqlite, curl
+          coverage: none
+
+      - if: matrix.lang == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.version }}
+
+      - if: matrix.lang == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.version }}
+
+      - if: matrix.lang == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.version }}
+
+      - name: Run the shared postback tests
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.run }}
