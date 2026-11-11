@@ -15,7 +15,7 @@ Moonetix is a pay-per-result affiliate network. Publishers add its offerwall, an
 > **Get your App ID and keys: sign up free at https://moonetix.com/register**
 > Then read [docs.moonetix.com/postbacks](https://docs.moonetix.com/postbacks) and check a hash with the free [postback hash checker](https://moonetix.com/tools/postback-hash-checker).
 
-## Why this repo
+## What these handlers guarantee
 
 1. **No double credits.** Every handler credits each `transaction_id` once, also when Moonetix retries or the same postback arrives 10 times at once. The tests prove it.
 2. **Reversals done right.** Status 2 takes back exactly the amount that was credited, from the user who got it, and only once. A reversal for a transaction you never credited changes nothing.
