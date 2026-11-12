@@ -5,15 +5,15 @@
 [![CI](https://github.com/moonetix/offerwall-postback-handlers/actions/workflows/ci.yml/badge.svg)](https://github.com/moonetix/offerwall-postback-handlers/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-docs.moonetix.com-1f6feb.svg)](https://docs.moonetix.com/postbacks)
-[![Get keys](https://img.shields.io/badge/get%20keys-moonetix.com-0b7a75.svg)](https://moonetix.com/register)
+[![Get keys](https://img.shields.io/badge/get%20keys-moonetix.com-0b7a75.svg)](https://moonetix.com/register?from=github-offerwall-postback-handlers)
 [![Hash checker](https://img.shields.io/badge/tool-postback%20hash%20checker-6e7781.svg)](https://moonetix.com/tools/postback-hash-checker)
 [![Languages](https://img.shields.io/badge/PHP%208%20%7C%20Node%2022%20%7C%20Python%203%20%7C%20Java%2017-handlers-555.svg)](#handlers)
 [![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#handlers)
 
-Moonetix is a pay-per-result affiliate network. Publishers add its offerwall, and their users earn the publisher's own currency by completing offers. When an offer is credited or reversed, Moonetix calls your postback URL. This repo has a ready handler for that URL in four languages.
+Moonetix is an affiliate network. Publishers add its offerwall, and their users earn the publisher's own currency by completing offers. When an offer is credited or reversed, Moonetix calls your postback URL. This repo has a ready handler for that URL in four languages.
 
 > [!TIP]
-> **Get your App ID and keys: sign up free at https://moonetix.com/register**
+> **Get your App ID and keys: sign up free at https://moonetix.com/register?from=github-offerwall-postback-handlers**
 > Then read [docs.moonetix.com/postbacks](https://docs.moonetix.com/postbacks) and check a hash with the free [postback hash checker](https://moonetix.com/tools/postback-hash-checker).
 
 ## What these handlers guarantee
@@ -35,7 +35,7 @@ No frameworks and no packages to install. Each handler is one file you can read 
 
 ## Quick start
 
-You need your postback secret key. Find it on the Postback page of your [Moonetix dashboard](https://moonetix.com/register).
+You need your postback secret key. Find it on the Postback page of your [Moonetix dashboard](https://moonetix.com/register?from=github-offerwall-postback-handlers).
 
 ```sh
 git clone https://github.com/moonetix/offerwall-postback-handlers.git
@@ -53,6 +53,17 @@ The handler now answers on `http://127.0.0.1:8080/postback` (PHP: `/postback.php
 ```text
 https://yoursite.com/postback?user={user_id}&tx={transaction_id}&event={event_id}&status={status}&reward={reward}&payout={payout}&hash={hash}
 ```
+
+### Configuration
+
+All four handlers read the same environment variables.
+
+| Variable | Required | Default | Used by | Purpose |
+| --- | --- | --- | --- | --- |
+| `MOONETIX_POSTBACK_KEY` | yes | none | all | Postback secret key. Without it Node, Python and Java exit with `Set MOONETIX_POSTBACK_KEY first.` and PHP answers `500 Not configured`. |
+| `HOST` | no | `127.0.0.1` | Node, Python, Java | Listen address. Keep it on loopback behind a reverse proxy. |
+| `PORT` | no | `8080` | Node, Python, Java | Listen port. For PHP, the port is the one you pass to `php -S` or your web server. |
+| `DB_PATH` | no | `data/moonetix.sqlite` in the handler folder | PHP, Node, Python | SQLite file. Keep it outside the web root. Java keeps balances in memory until you plug in your database. |
 
 ## Test it in 30 seconds
 
@@ -79,28 +90,33 @@ ok    same credit sent 10 times in parallel is paid once
 
 The test data is signed with a test key that is in the file. It is not a real key.
 
+Once you have adapted a handler to your own database, point [postback-tester](https://github.com/moonetix/postback-tester) at it. It builds postbacks exactly like Moonetix, signed with the key the quick start loaded from `.env`, and checks the same rules from the outside, including five parallel copies of one credit:
+
+```sh
+npx github:moonetix/postback-tester --preset moonetix \
+  'http://127.0.0.1:8080/postback?user={user_id}&tx={transaction_id}&event={event_id}&status={status}&reward={reward}&payout={payout}&hash={hash}' --user 42
+```
+
 ## How it works
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant Wall as Moonetix offerwall
-    participant Moonetix
-    participant Handler as Your postback handler
+    participant M as Moonetix
+    participant H as Your handler
     participant DB as Your database
 
-    User->>Wall: Opens your signed offerwall link
-    User->>Wall: Completes an offer
-    Wall->>Moonetix: Advertiser confirms the result
-    Moonetix->>Handler: GET /postback?user&tx&status=1&reward&hash
-    Handler->>Handler: Check the HMAC-SHA256 hash
-    Handler->>DB: Store tx once, add reward to the balance
-    DB-->>Handler: Saved
-    Handler-->>Moonetix: 200 OK
-    Note over Moonetix,Handler: Later, if the result is reversed
-    Moonetix->>Handler: GET /postback?...&tx (same)&status=2&hash
-    Handler->>DB: Take back what tx credited, once
-    Handler-->>Moonetix: 200 OK
+    User->>M: Completes an offer on the offerwall
+    Note over M: Advertiser confirms the result
+    M->>H: GET /postback, status=1, hash
+    Note over H: HMAC-SHA256 check,<br/>constant time
+    H->>DB: Insert tx once, add reward
+    DB-->>H: Committed
+    H-->>M: 200 OK
+    Note over M,H: Later, if the result is reversed
+    M->>H: Same tx, status=2, hash
+    H->>DB: Take back what tx credited, once
+    H-->>M: 200 OK
 ```
 
 For every request, each handler does this, in this order:
@@ -149,6 +165,20 @@ When your handler runs on a public HTTPS URL:
 
 A test postback has a `transaction_id` that starts with `test_` and `offer_id` 0. These handlers credit it like a real one, so remove test rewards from your test accounts before going live.
 
+## When a postback fails
+
+Reports, Postbacks in your dashboard shows the code your handler answered. The handlers answer with these codes and plain-text bodies:
+
+| Answer | Meaning | Fix |
+| --- | --- | --- |
+| `400 Missing hash` | No `hash` parameter, or it is not 64 hex characters. | Check that the saved postback URL contains `hash={hash}` spelled exactly like that. |
+| `403 Invalid hash` | The hash does not match. | Use the postback secret key, not the link hash salt. Do not trim, round or reformat values before hashing. Paste the URL from the log into the [hash checker](https://moonetix.com/tools/postback-hash-checker). |
+| `400 Bad parameters` | Signed, but `status` is not 1 or 2, `reward` is not a plain non-negative number, `tx` is empty or longer than 191 characters, or the user ID has characters outside `A-Z a-z 0-9 . _ @ : + -`. | Map the macros to the right parameter names: `user`, `tx`, `status`, `reward`, `hash`. |
+| `404 Not found` | Wrong path. | Node, Python and Java answer on `/postback` only; PHP on `/postback.php`. |
+| `500 Not configured` (PHP) or `500 Error` | No key set for PHP, or the database write failed. Moonetix retries. | Check that the web server passes `MOONETIX_POSTBACK_KEY` to PHP and that `DB_PATH` is writable by the server user. |
+
+Two failures never reach the handler at all: a redirect (Moonetix does not follow 301 or 302, so save the final HTTPS URL) and a timeout (answer within 6 seconds). If postbacks never arrive, a firewall or bot protection in front of your server is the usual cause.
+
 ## Learn more
 
 - [Postbacks](https://docs.moonetix.com/postbacks): macros, statuses, retries, IP addresses
@@ -160,8 +190,16 @@ A test postback has a `transaction_id` that starts with `test_` and `offer_id` 0
 - Academy: [Prevent duplicate reward credits](https://moonetix.com/academy/integrations/prevent-duplicate-reward-credits)
 
 > [!TIP]
-> **Ready to add an offerwall? Get your App ID and keys: sign up free at https://moonetix.com/register**
+> **Ready to add an offerwall? Get your App ID and keys: sign up free at https://moonetix.com/register?from=github-offerwall-postback-handlers**
 > Docs: [docs.moonetix.com/postbacks](https://docs.moonetix.com/postbacks). Free tool: [postback hash checker](https://moonetix.com/tools/postback-hash-checker).
+
+## More Moonetix examples
+
+- **Start here:** [awesome-offerwalls](https://github.com/moonetix/awesome-offerwalls)
+- **Web and backends:** [offerwall-nextjs-starter](https://github.com/moonetix/offerwall-nextjs-starter), [offerwall-react-vite](https://github.com/moonetix/offerwall-react-vite), [offerwall-vue-nuxt](https://github.com/moonetix/offerwall-vue-nuxt), [offerwall-express](https://github.com/moonetix/offerwall-express), [offerwall-laravel](https://github.com/moonetix/offerwall-laravel), [offerwall-django](https://github.com/moonetix/offerwall-django), [offerwall-supabase](https://github.com/moonetix/offerwall-supabase), [rewards-site-starter](https://github.com/moonetix/rewards-site-starter), [moonetix-offerwall-wordpress](https://github.com/moonetix/moonetix-offerwall-wordpress)
+- **Apps and games:** [offerwall-flutter-example](https://github.com/moonetix/offerwall-flutter-example), [offerwall-godot](https://github.com/moonetix/offerwall-godot)
+- **Communities and desktop:** [telegram-mini-app-offerwall](https://github.com/moonetix/telegram-mini-app-offerwall), [discord-rewards-bot](https://github.com/moonetix/discord-rewards-bot)
+- **Tools and data:** [postback-tester](https://github.com/moonetix/postback-tester), [signup-guard](https://github.com/moonetix/signup-guard), [datacenter-ip-ranges](https://github.com/moonetix/datacenter-ip-ranges), [reward-economy-kit](https://github.com/moonetix/reward-economy-kit), [referral-engine](https://github.com/moonetix/referral-engine), [gamification-kit](https://github.com/moonetix/gamification-kit), [offerwall-fraud-playbook](https://github.com/moonetix/offerwall-fraud-playbook), [affiliate-postback-macros](https://github.com/moonetix/affiliate-postback-macros), [country-tiers](https://github.com/moonetix/country-tiers)
 
 ## License
 
